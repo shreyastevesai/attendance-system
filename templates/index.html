@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>December Work Tracker</title>
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#eef3f9;
+    padding:20px;
+}
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:white;
+}
+th,td{
+    border:1px solid #aaa;
+    padding:6px;
+    text-align:center;
+}
+.off{
+    background:#ffdddd;
+    color:#900;
+}
+.work{
+    background:#e8ffe8;
+}
+input,select{
+    width:55px;
+    text-align:center;
+    padding:2px;
+}
+.green{
+    color:green;
+    font-weight:bold;
+}
+.red{
+    color:red;
+    font-weight:bold;
+}
+.orange{
+    color:orange;
+    font-weight:bold;
+}
+</style>
+</head>
+<body>
+
+<h2>December Work Hours Tracker</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Day</th>
+      <th>Punch In</th>
+      <th>Punch Out</th>
+      <th>Worked</th>
+      <th>Today +/-</th>
+      <th>Weekly Balance</th>
+    </tr>
+  </thead>
+  <tbody id="rows"></tbody>
+</table>
+
+<script>
+// Daily target in minutes (9 hours)
+const TARGET_MIN = 9 * 60;
+
+// Show in UI: 02-Dec-2025
+function formatDateDisplay(d){
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mon = d.toLocaleDateString("en-US",{month:"short"});
+    const yr = d.getFullYear();
+    return `${dd}-${mon}-${yr}`;
+}
+
+// Table rows build for December 2025
+function buildTable(){
+    const rows = document.getElementById("rows");
+    let d = new Date("2025-12-01");
+    const end = new Date("2025-12-31");
+
+    while(d <= end){
+        const displayDate = formatDateDisplay(d);              // 02-Dec-2025
+        const key = d.toISOString().split("T")[0];             // 2025-12-01
+        const dayName = d.toLocaleDateString("en-US",{weekday:"long"});
+        const isOff = (dayName === "Saturday" || dayName === "Sunday");
+
+        rows.insertAdjacentHTML("beforeend", `
+<tr class="${isOff ? "off" : "work"}">
+  <td data-key="${key}">${displayDate}</td>
+  <td>${dayName}</td>
+  <td>
+    ${isOff ? "-" : `
+      <input class="inH" type="number" min="1" max="12" value="10"> :
+      <input class="inM" type="number" min="0" max="59" value="30">
+      <select class="inAP">
+        <option selected>AM</option>
+        <option>PM</option>
+      </select>
+    `}
+  </td>
+  <td>
+    ${isOff ? "-" : `
+      <input class="outH" type="number" min="1" max="12" value="7"> :
+      <input class="outM" type="number" min="0" max="59" value="30">
+      <select class="outAP">
+        <option>AM</option>
+        <option selected>PM</option>
+      </select>
+    `}
+  </td>
+  <td id="w_${key}">-</td>
+  <td id="d_${key}">-</td>
+  <td id="b_${key}">-</td>
+</tr>
+        `);
+
+        d.setDate(d.getDate() + 1);
+    }
+}
+
+// Convert HH,MM,AM/PM -> total minutes (0–1439)
+function toMinutes(h, m, ap){
+    h = parseInt(h);
+    m = parseInt(m);
+    if (ap === "PM" && h !== 12) h += 12;
+    if (ap === "AM" && h === 12) h = 0;
+    return h * 60 + m;
+}
+
+// Called when user changes any time input
+function updateRow(tr){
+    const key = tr.children[0].dataset.key;
+    const inH = tr.querySelector(".inH");
+    if (!inH) return;    // weekend row
+
+    const inM  = tr.querySelector(".inM");
+    const inAP = tr.querySelector(".inAP");
+    const outH = tr.querySelector(".outH");
+    const outM = tr.querySelector(".outM");
+    const outAP= tr.querySelector(".outAP");
+
+    const start = toMinutes(inH.value, inM.value, inAP.value);
+    let end   = toMinutes(outH.value, outM.value, outAP.value);
+
+    // Handle overnight (safety)
+    if (end < start) end += 24 * 60;
+
+    const workMin = end - start;
+    const h = Math.floor(workMin / 60);
+    const m = workMin % 60;
+
+    document.getElementById("w_" + key).innerText =
+        `${h}h ${String(m).padStart(2,'0')}m`;
+
+    // Save full record to backend
+    const payload = {
+        date: key,
+        hours: workMin / 60,  // decimal for calc
+        inH: inH.value,
+        inM: inM.value,
+        inAP: inAP.value,
+        outH: outH.value,
+        outM: outM.value,
+        outAP: outAP.value
+    };
+
+    fetch("/save", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+    }).then(() => loadData());
+}
+
+// Load all data, restore inputs, compute daily +/- & weekly balance
+function loadData(){
+    fetch("/load")
+      .then(r => r.json())
+      .then(res => {
+          const data = res.data || {};
+          const keys = Object.keys(data).sort(); // sort by date
+
+          let weekBalanceMin = 0;
+
+          keys.forEach(key => {
+              const rec = data[key];
+              const totalMinutes = Math.round(rec.hours * 60);
+
+              // Find row by key
+              const row = document.querySelector(`td[data-key='${key}']`)?.parentElement;
+              if (!row) return;
+
+              const wCell = document.getElementById("w_" + key);
+              const dCell = document.getElementById("d_" + key);
+              const bCell = document.getElementById("b_" + key);
+
+              const dt = new Date(key);
+              const wd = dt.getDay(); // Sun=0, Mon=1,...Sat=6
+
+              // Restore inputs only for weekdays
+              if (wd !== 0 && wd !== 6) {
+                  const inH  = row.querySelector(".inH");
+                  const inM  = row.querySelector(".inM");
+                  const inAP = row.querySelector(".inAP");
+                  const outH = row.querySelector(".outH");
+                  const outM = row.querySelector(".outM");
+                  const outAP= row.querySelector(".outAP");
+
+                  if (inH && rec.inH !== undefined)  inH.value = rec.inH;
+                  if (inM && rec.inM !== undefined)  inM.value = rec.inM;
+                  if (inAP && rec.inAP !== undefined) inAP.value = rec.inAP;
+                  if (outH && rec.outH !== undefined) outH.value = rec.outH;
+                  if (outM && rec.outM !== undefined) outM.value = rec.outM;
+                  if (outAP && rec.outAP !== undefined) outAP.value = rec.outAP;
+              }
+
+              // Show worked time
+              if (wCell) {
+                  const h = Math.floor(totalMinutes / 60);
+                  const m = totalMinutes % 60;
+                  wCell.innerText = `${h}h ${String(m).padStart(2,'0')}m`;
+              }
+
+              // Weekend = no today diff / balance
+              if (wd === 0 || wd === 6) {
+                  if (dCell) { dCell.innerText = "-"; dCell.className = ""; }
+                  if (bCell) { bCell.innerText = "-"; bCell.className = ""; }
+                  return;
+              }
+
+              // Today difference from target
+              const todayDiffMin = totalMinutes - TARGET_MIN;
+
+              // Monday → reset weekly balance
+              if (wd === 1) {
+                  weekBalanceMin = todayDiffMin;
+              } else {
+                  weekBalanceMin += todayDiffMin;
+              }
+
+              // ---- Today +/- cell ----
+              if (dCell) {
+                  const absDiff = Math.abs(todayDiffMin);
+                  const dh = Math.floor(absDiff / 60);
+                  const dm = absDiff % 60;
+
+                  if (todayDiffMin < 0) {
+                      dCell.innerText = `–${dh}h ${dm}m`;
+                      dCell.className = "red";
+                  } else if (todayDiffMin > 0) {
+                      dCell.innerText = `+${dh}h ${dm}m`;
+                      dCell.className = "green";
+                  } else {
+                      dCell.innerText = "0h 00m";
+                      dCell.className = "orange";
+                  }
+              }
+
+              // ---- Weekly Balance cell ----
+              if (bCell) {
+                  const absBal = Math.abs(weekBalanceMin);
+                  const bh = Math.floor(absBal / 60);
+                  const bm = absBal % 60;
+
+                  if (weekBalanceMin < 0) {
+                      bCell.innerText = `–${bh}h ${bm}m`;
+                      bCell.className = "red";
+                  } else if (weekBalanceMin > 0) {
+                      bCell.innerText = `+${bh}h ${bm}m`;
+                      bCell.className = "green";
+                  } else {
+                      bCell.innerText = "0h 00m";
+                      bCell.className = "orange";
+                  }
+              }
+          });
+      });
+}
+
+// Any change in input/select → update row
+document.addEventListener("change", e => {
+    if (e.target.matches("input,select")) {
+        const tr = e.target.closest("tr");
+        if (tr) updateRow(tr);
+    }
+});
+
+// Build table and then load data
+buildTable();
+setTimeout(loadData, 300);
+</script>
+
+</body>
+</html>
