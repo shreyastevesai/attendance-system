@@ -8,14 +8,24 @@ DATA_FILE = "data.json"
 
 
 def load_data():
+    """Always return dict with at least {'users': {}}"""
     if not os.path.exists(DATA_FILE):
+        base = {"users": {}}
         with open(DATA_FILE, "w") as f:
-            json.dump({"users": {}}, f)
+            json.dump(base, f, indent=4)
+        return base
+
     with open(DATA_FILE, "r") as f:
         try:
-            return json.load(f)
-        except:
-            return {"users": {}}
+            data = json.load(f)
+        except json.JSONDecodeError:
+            data = {}
+
+    # Ensure top-level 'users' key exists and is a dict
+    if "users" not in data or not isinstance(data["users"], dict):
+        data["users"] = {}
+
+    return data
 
 
 def save_data(data):
@@ -43,7 +53,7 @@ def login_page():
         data = load_data()
         user = data["users"].get(email)
 
-        if user and user["password"] == password:
+        if user and user.get("password") == password:
             session["user"] = email
             return redirect(url_for("home"))
         else:
@@ -63,6 +73,7 @@ def signup_page():
         if email in data["users"]:
             return render_template("signup.html", error="Email already registered")
 
+        # create empty data storage for this user
         data["users"][email] = {"password": password, "data": {}}
         save_data(data)
 
@@ -87,6 +98,11 @@ def save():
     email = session["user"]
 
     data = load_data()
+
+    # make sure user node exists
+    if email not in data["users"]:
+        data["users"][email] = {"password": hash_password("temp"), "data": {}}
+
     data["users"][email]["data"][date] = rec
     save_data(data)
 
@@ -100,8 +116,15 @@ def load():
 
     email = session["user"]
     data = load_data()
-    return jsonify({"data": data["users"][email]["data"]})
+    user = data["users"].get(email)
+
+    if not user:
+        return jsonify({"data": {}})
+
+    return jsonify({"data": user.get("data", {})})
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # important for Render: use dynamic port
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
