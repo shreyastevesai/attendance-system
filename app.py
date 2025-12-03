@@ -7,7 +7,7 @@ app.secret_key = "super-secret-key"
 DATA_FILE = "data.json"
 
 
-# ------------------- JSON HANDLING -------------------
+# ---------------- JSON HANDLING ----------------
 def load_data():
     if not os.path.exists(DATA_FILE):
         with open(DATA_FILE, "w") as f:
@@ -34,7 +34,7 @@ def hash_pass(p):
     return hashlib.sha256(p.encode()).hexdigest()
 
 
-# ------------------- SIGNUP -------------------
+# ---------------- SIGNUP ----------------
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
@@ -43,11 +43,9 @@ def signup():
 
         data = load_data()
 
-        # IF USER EXISTS
         if email in data["users"]:
-            return render_template("signup.html", error="Email already registered!")
+            return render_template("signup.html", error="Email already exists!")
 
-        # CREATE NEW USER
         data["users"][email] = {
             "password": hash_pass(password),
             "data": {}
@@ -59,7 +57,7 @@ def signup():
     return render_template("signup.html")
 
 
-# ------------------- LOGIN -------------------
+# ---------------- LOGIN ----------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -74,50 +72,48 @@ def login():
             session["month"] = selected_month
             return redirect("/")
 
-        return render_template("login.html", error="Wrong email or password!")
+        return render_template("login.html", error="Invalid email or password!")
 
     return render_template("login.html")
 
 
-# ------------------- FORGOT PASSWORD -------------------
+# ---------------- FORGOT PASSWORD ----------------
 @app.route("/forgot", methods=["GET", "POST"])
 def forgot():
     if request.method == "POST":
         email = request.form["email"].lower()
-
         data = load_data()
 
         if email not in data["users"]:
             return render_template("forgot.html", error="Email not found!")
 
-        # Reset password
-        new_password = "123456"  # Default reset
+        new_password = "123456"
         data["users"][email]["password"] = hash_pass(new_password)
-
         save_data(data)
 
-        msg = f"Your new password is: {new_password}"
-        return render_template("forgot.html", success=msg)
+        return render_template("forgot.html",
+                               success=f"New password set: {new_password}")
 
     return render_template("forgot.html")
 
 
-# ------------------- LOGOUT -------------------
+# ---------------- LOGOUT ----------------
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/login")
 
 
-# ------------------- HOME -------------------
+# ---------------- HOME ----------------
 @app.route("/")
 def home():
     if "user" not in session:
         return redirect("/login")
+
     return render_template("index.html", month=session["month"])
 
 
-# ------------------- SAVE ENTRY -------------------
+# ---------------- SAVE ENTRY ----------------
 @app.route("/save", methods=["POST"])
 def save():
     if "user" not in session:
@@ -135,7 +131,7 @@ def save():
     return jsonify({"ok": True})
 
 
-# ------------------- LOAD ENTRY -------------------
+# ---------------- LOAD ENTRY ----------------
 @app.route("/load")
 def load():
     if "user" not in session:
