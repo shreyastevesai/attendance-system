@@ -118,7 +118,7 @@ function buildTable(){
         <input class="inM" type="number" min="0" max="59" value="30">
         <select class="inAP">
             <option selected>AM</option>
-            <option >PM</option>
+            <option>PM</option>
         </select>
       `}
     </td>
@@ -231,46 +231,8 @@ function loadData(){
                 row.querySelector(".outAP").value = rec.outAP;
             }
 
-            // Worked hours
-            if (wCell){
-                const h = Math.floor(totalMinutes/60);
-                const m = totalMinutes%60;
-                wCell.innerText = `${h}h ${String(m).padStart(2,'0')}m`;
-            }
-
-            // Skip Sat/Sun
-            if (wd === 0 || wd === 6){
-                dCell.innerText = "-";
-                bCell.innerText = "-";
-                return;
-            }
-
-            // Today difference
-            const todayDiff = totalMinutes - TARGET_MIN;
-
-            if (wd === 1) weekBalanceMin = todayDiff;
-            else          weekBalanceMin += todayDiff;
-
-            if (todayDiff < 0){
-                dCell.innerText = `-${Math.abs(todayDiff/60|0)}h ${Math.abs(todayDiff%60)}m`;
-                dCell.className = "red";
-            } else if (todayDiff > 0){
-                dCell.innerText = `+${todayDiff/60|0}h ${todayDiff%60}m`;
-                dCell.className = "green";
-            } else {
-                dCell.innerText = "0h 00m";
-                dCell.className = "orange";
-            }
-
-            // Weekly balance
-            const absBal = Math.abs(weekBalanceMin);
-            if (weekBalanceMin < 0){
-                bCell.innerText = `-${absBal/60|0}h ${absBal%60}m`;
-                bCell.className = "red";
-            } else {
-                bCell.innerText = `+${absBal/60|0}h ${absBal%60}m`;
-                bCell.className = "green";
-            }
+            // Trigger auto-calculation for every loaded row
+            updateRow(row);
         });
     });
 }
