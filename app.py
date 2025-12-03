@@ -2,14 +2,12 @@ from flask import Flask, render_template, request, redirect, session, jsonify
 import json, os, hashlib
 
 app = Flask(__name__)
-app.secret_key = "super-secret-session-key"
+app.secret_key = "super-secret-key"
 
 DATA_FILE = "data.json"
 
 
-# ---------------------------------
-# LOAD & SAVE JSON DATA
-# ---------------------------------
+# ------------------- JSON HANDLING -------------------
 def load_data():
     if not os.path.exists(DATA_FILE):
         with open(DATA_FILE, "w") as f:
@@ -23,6 +21,7 @@ def load_data():
 
     if "users" not in data:
         data["users"] = {}
+
     return data
 
 
@@ -35,43 +34,24 @@ def hash_pass(p):
     return hashlib.sha256(p.encode()).hexdigest()
 
 
-# ---------------------------------
-# LOGIN PAGE
-# ---------------------------------
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        email = request.form["email"].lower()
-        password = hash_pass(request.form["password"])
-        selected_month = request.form["month"]  # ⭐ MONTH SELECTED
-
-        data = load_data()
-
-        if email in data["users"] and data["users"][email]["password"] == password:
-            session["user"] = email
-            session["month"] = selected_month  # ⭐ SAVE MONTH IN SESSION
-            return redirect("/")
-
-        return render_template("login.html", error="Invalid email or password")
-
-    return render_template("login.html")
-
-
-# ---------------------------------
-# SIGNUP PAGE
-# ---------------------------------
+# ------------------- SIGNUP -------------------
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
         email = request.form["email"].lower()
-        password = hash_pass(request.form["password"])
+        password = request.form["password"]
 
         data = load_data()
 
+        # IF USER EXISTS
         if email in data["users"]:
-            return render_template("signup.html", error="Email already exists!")
+            return render_template("signup.html", error="Email already registered!")
 
-        data["users"][email] = {"password": hash_pass(password), "data": {}}
+        # CREATE NEW USER
+        data["users"][email] = {
+            "password": hash_pass(password),
+            "data": {}
+        }
         save_data(data)
 
         return redirect("/login")
@@ -79,58 +59,92 @@ def signup():
     return render_template("signup.html")
 
 
-# ---------------------------------
-# LOGOUT
-# ---------------------------------
+# ------------------- LOGIN -------------------
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form["email"].lower()
+        password = hash_pass(request.form["password"])
+        selected_month = request.form["month"]
+
+        data = load_data()
+
+        if email in data["users"] and data["users"][email]["password"] == password:
+            session["user"] = email
+            session["month"] = selected_month
+            return redirect("/")
+
+        return render_template("login.html", error="Wrong email or password!")
+
+    return render_template("login.html")
+
+
+# ------------------- FORGOT PASSWORD -------------------
+@app.route("/forgot", methods=["GET", "POST"])
+def forgot():
+    if request.method == "POST":
+        email = request.form["email"].lower()
+
+        data = load_data()
+
+        if email not in data["users"]:
+            return render_template("forgot.html", error="Email not found!")
+
+        # Reset password
+        new_password = "123456"  # Default reset
+        data["users"][email]["password"] = hash_pass(new_password)
+
+        save_data(data)
+
+        msg = f"Your new password is: {new_password}"
+        return render_template("forgot.html", success=msg)
+
+    return render_template("forgot.html")
+
+
+# ------------------- LOGOUT -------------------
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/login")
 
 
-# ---------------------------------
-# ATTENDANCE PAGE
-# ---------------------------------
+# ------------------- HOME -------------------
 @app.route("/")
 def home():
     if "user" not in session:
         return redirect("/login")
-
-    month = session.get("month", "2025-12")
-    return render_template("index.html", month=month)
+    return render_template("index.html", month=session["month"])
 
 
-# ---------------------------------
-# SAVE ENTRY
-# ---------------------------------
+# ------------------- SAVE ENTRY -------------------
 @app.route("/save", methods=["POST"])
 def save():
     if "user" not in session:
         return jsonify({"error": "Not logged in"}), 401
 
-    email = session["user"]
+    user = session["user"]
     rec = request.get_json()
     date = rec["date"]
 
     data = load_data()
-    data["users"][email]["data"][date] = rec
+
+    data["users"][user]["data"][date] = rec
     save_data(data)
 
     return jsonify({"ok": True})
 
 
-# ---------------------------------
-# LOAD USER DATA
-# ---------------------------------
+# ------------------- LOAD ENTRY -------------------
 @app.route("/load")
 def load():
     if "user" not in session:
         return jsonify({"error": "Not logged in"}), 401
 
-    email = session["user"]
+    user = session["user"]
     data = load_data()
 
-    return jsonify({"data": data["users"][email]["data"]})
+    return jsonify({"data": data["users"][user]["data"]})
 
 
 if __name__ == "__main__":
