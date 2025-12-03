@@ -2,12 +2,11 @@ from flask import Flask, render_template, request, redirect, session, jsonify
 import json, os, hashlib
 
 app = Flask(__name__)
-app.secret_key = "super-secret-key"
+app.secret_key = "super-secret"
 
 DATA_FILE = "data.json"
 
-
-# ---------------- JSON HANDLING ----------------
+# ---------- JSON HANDLING ----------
 def load_data():
     if not os.path.exists(DATA_FILE):
         with open(DATA_FILE, "w") as f:
@@ -15,14 +14,9 @@ def load_data():
 
     with open(DATA_FILE, "r") as f:
         try:
-            data = json.load(f)
+            return json.load(f)
         except:
-            data = {"users": {}}
-
-    if "users" not in data:
-        data["users"] = {}
-
-    return data
+            return {"users": {}}
 
 
 def save_data(data):
@@ -34,7 +28,7 @@ def hash_pass(p):
     return hashlib.sha256(p.encode()).hexdigest()
 
 
-# ---------------- SIGNUP ----------------
+# ---------- SIGNUP ----------
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
@@ -44,11 +38,11 @@ def signup():
         data = load_data()
 
         if email in data["users"]:
-            return render_template("signup.html", error="Email already exists!")
+            return render_template("signup.html", error="User already exists")
 
         data["users"][email] = {
             "password": hash_pass(password),
-            "data": {}
+            "attendance": {}   # <<<< FIXED KEY
         }
         save_data(data)
 
@@ -57,54 +51,27 @@ def signup():
     return render_template("signup.html")
 
 
-# ---------------- LOGIN ----------------
+# ---------- LOGIN ----------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         email = request.form["email"].lower()
         password = hash_pass(request.form["password"])
-        selected_month = request.form["month"]
+        month = request.form["month"]
 
         data = load_data()
 
         if email in data["users"] and data["users"][email]["password"] == password:
             session["user"] = email
-            session["month"] = selected_month
+            session["month"] = month
             return redirect("/")
 
-        return render_template("login.html", error="Invalid email or password!")
+        return render_template("login.html", error="Invalid email/password")
 
     return render_template("login.html")
 
 
-# ---------------- FORGOT PASSWORD ----------------
-@app.route("/forgot", methods=["GET", "POST"])
-def forgot():
-    if request.method == "POST":
-        email = request.form["email"].lower()
-        data = load_data()
-
-        if email not in data["users"]:
-            return render_template("forgot.html", error="Email not found!")
-
-        new_password = "123456"
-        data["users"][email]["password"] = hash_pass(new_password)
-        save_data(data)
-
-        return render_template("forgot.html",
-                               success=f"New password set: {new_password}")
-
-    return render_template("forgot.html")
-
-
-# ---------------- LOGOUT ----------------
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/login")
-
-
-# ---------------- HOME ----------------
+# ---------- HOME ----------
 @app.route("/")
 def home():
     if "user" not in session:
@@ -113,34 +80,51 @@ def home():
     return render_template("index.html", month=session["month"])
 
 
-# ---------------- SAVE ENTRY ----------------
+# ---------- SAVE (MAIN FIX HERE) ----------
 @app.route("/save", methods=["POST"])
 def save():
     if "user" not in session:
-        return jsonify({"error": "Not logged in"}), 401
+        return jsonify({"error": "Not logged in"})
+
+    rec = request.get_json()
+
+    date = rec.get("date")  # <<<< FIXED: ensure correct date
+    if not date:
+        return jsonify({"error": "Invalid date"}), 400
 
     user = session["user"]
-    rec = request.get_json()
-    date = rec["date"]
 
     data = load_data()
 
-    data["users"][user]["data"][date] = rec
+    # FIXED: use correct key "attendance"
+    if "attendance" not in data["users"][user]:
+        data["users"][user]["attendance"] = {}
+
+    # SAVE ENTRY
+    data["users"][user]["attendance"][date] = rec
     save_data(data)
 
-    return jsonify({"ok": True})
+    return jsonify({"status": "ok"})
 
 
-# ---------------- LOAD ENTRY ----------------
+# ---------- LOAD ----------
 @app.route("/load")
 def load():
     if "user" not in session:
-        return jsonify({"error": "Not logged in"}), 401
+        return jsonify({"error": "Not logged in"})
 
     user = session["user"]
-    data = load_data()
 
-    return jsonify({"data": data["users"][user]["data"]})
+    data = load_data()
+    att = data["users"][user].get("attendance", {})
+
+    return jsonify({"data": att})
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
 
 
 if __name__ == "__main__":
