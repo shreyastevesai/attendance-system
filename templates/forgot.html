@@ -1,50 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <title>Forgot Password</title>
+
 <style>
-*{font-family:Poppins;}
 body{
-    background:linear-gradient(135deg,#6c63ff,#42a5f5);
-    height:100vh;display:flex;justify-content:center;align-items:center;
+    font-family:Poppins;
+    background:linear-gradient(135deg,#6aa9ff,#9ac4ff);
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    margin:0;
 }
-.box{
-    width:350px;padding:30px;background:rgba(255,255,255,0.2);
-    border-radius:20px;color:white;text-align:center;backdrop-filter:blur(12px);
+
+.card{
+    width:360px;background:white;padding:30px;
+    border-radius:20px;box-shadow:0 10px 25px rgba(0,0,0,0.2);
+    animation:fade 0.7s ease;
 }
+
+@keyframes fade{
+    from{opacity:0;}
+    to{opacity:1;}
+}
+
+h2{text-align:center;color:#4a78dd;margin-bottom:15px;}
+
 input{
-    width:100%;padding:10px;margin:10px 0;border-radius:10px;border:none;
+    width:94%;padding:12px;margin-top:12px;
+    border-radius:10px;border:1px solid #bbb;
 }
+
 button{
-    width:100%;padding:10px;background:white;color:#6c63ff;
-    font-weight:600;border-radius:10px;border:none;margin-top:10px;
+    width:100%;padding:12px;margin-top:15px;
+    background:#4a78dd;border:none;color:white;
+    border-radius:10px;font-size:17px;cursor:pointer;
 }
-.error{background:#ff4b4b;padding:8px;border-radius:8px;}
-.success{background:#4bb543;padding:8px;border-radius:8px;}
-a{color:white;text-decoration:none;margin-top:15px;display:block;}
+
+.error{color:red;text-align:center;margin-bottom:8px;}
+.success{color:green;text-align:center;margin-bottom:8px;}
 </style>
 </head>
 
 <body>
 
-<div class="box">
-    <h2>Reset Password</h2>
+<div class="card">
 
-    <form method="POST">
-        <input name="email" placeholder="Enter Email" required>
+<h2>Reset Password 🔑</h2>
 
-        {% if error %}
-        <p class="error">{{ error }}</p>
-        {% endif %}
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+{% if success %}<div class="success">{{ success }}</div>{% endif %}
 
-        {% if success %}
-        <p class="success">{{ success }}</p>
-        {% endif %}
+<form method="POST">
+    <input type="email" name="email" placeholder="Enter Registered Email" required>
+    <button type="submit">Reset</button>
+</form>
 
-        <button type="submit">Reset</button>
-    </form>
-
-    <a href="/login">Back to Login</a>
 </div>
 
 </body>

@@ -6,119 +6,187 @@
 
 <style>
 body{
-    font-family: Poppins, Arial;
-    background:#eef3f9;
-    padding:20px;
-}
-h2{
-    text-align:center;
-    margin-bottom:20px;
-    font-weight:600;
+    font-family:Poppins, Arial;
+    background:linear-gradient(135deg,#6a9cfb,#7bb2ff,#a5c8ff);
+    margin:0;
+    padding:0;
+    animation:fadeIn 1s ease;
 }
 
-table{
-    width:100%;
-    border-collapse:collapse;
-    background:white;
+@keyframes fadeIn{
+    from{opacity:0;}
+    to{opacity:1;}
+}
+
+/* Top Header */
+.header{
+    background:rgba(255,255,255,0.25);
+    backdrop-filter:blur(8px);
+    padding:18px 25px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    box-shadow:0 3px 12px rgba(0,0,0,0.15);
+}
+
+.header-left{
+    font-size:22px;
+    font-weight:600;
+    color:white;
+}
+
+.month-box input{
+    padding:8px;
     border-radius:10px;
+    border:none;
+    font-size:15px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.2);
+}
+
+.logout-btn{
+    background:#ff4b4b;
+    padding:10px 18px;
+    color:white;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:600;
+    transition:0.3s;
+}
+.logout-btn:hover{
+    background:#d83b3b;
+}
+
+/* Page Title */
+h2{
+    text-align:center;
+    color:white;
+    margin-top:15px;
+    font-size:26px;
+    font-weight:600;
+    text-shadow:0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Table */
+table{
+    width:90%;
+    margin:25px auto;
+    background:white;
+    border-radius:18px;
     overflow:hidden;
-    box-shadow:0 3px 10px rgba(0,0,0,0.1);
+    border-collapse:collapse;
+    box-shadow:0 12px 25px rgba(0,0,0,0.25);
+    animation:slideUp 0.7s ease;
+}
+
+@keyframes slideUp{
+    from{opacity:0;transform:translateY(40px);}
+    to{opacity:1;transform:translateY(0);}
 }
 
 th{
-    background:#5a8dee;
+    background:#4a78dd;
     color:white;
-    padding:10px;
+    padding:12px;
     font-size:15px;
 }
 
 td{
-    padding:8px;
-    border-bottom:1px solid #ddd;
+    padding:10px;
     text-align:center;
+    border-bottom:1px solid #e5e5e5;
     font-size:14px;
 }
 
-tr:last-child td{
-    border-bottom:none;
-}
+.work { background:#e9ffe9; }
+.off  { background:#ffe5e5; }
 
-.work{background:#eaffea;}
-.off {background:#ffe5e5;}
-
-.green{color:green;font-weight:600;}
 .red{color:red;font-weight:600;}
+.green{color:green;font-weight:600;}
 .orange{color:orange;font-weight:600;}
 
 input{
-    width:45px;
-    padding:5px;
-    border-radius:6px;
-    border:1px solid #bbb;
-}
-select{
-    padding:5px;
-    border-radius:6px;
+    width:48px;
+    padding:6px;
+    border-radius:8px;
     border:1px solid #bbb;
 }
 
-.logout-btn{
-    float:right;
-    background:#ff4b4b;
-    border:none;
-    padding:10px 18px;
-    color:white;
+select{
+    padding:6px;
     border-radius:8px;
-    cursor:pointer;
-    font-weight:600;
+    border:1px solid #bbb;
 }
 </style>
 </head>
-
 <body>
 
-<button class="logout-btn" onclick="window.location='/logout'">Logout</button>
-<h2>Attendance Sheet — <span id="monthTitle"></span></h2>
+<!-- HEADER -->
+<div class="header">
 
+    <div class="header-left">Attendance Tracker</div>
+
+    <div class="month-box">
+        <input type="month" id="monthSwitch" value="{{ month }}">
+    </div>
+
+    <button class="logout-btn" onclick="window.location='/logout'">Logout</button>
+
+</div>
+
+<h2><span id="monthTitle"></span></h2>
+
+<!-- TABLE -->
 <table>
 <thead>
 <tr>
-<th>Date</th>
-<th>Day</th>
-<th>Punch In</th>
-<th>Punch Out</th>
-<th>Worked</th>
-<th>Today +/-</th>
-<th>Weekly Balance</th>
+    <th>Date</th>
+    <th>Day</th>
+    <th>Punch In</th>
+    <th>Punch Out</th>
+    <th>Worked</th>
+    <th>Today +/-</th>
+    <th>Weekly Balance</th>
 </tr>
 </thead>
+
 <tbody id="rows"></tbody>
 </table>
 
 
 <script>
-/* Month Title */
+/* CURRENT MONTH DISPLAY */
 const SELECTED_MONTH="{{ month }}";
 
 document.getElementById("monthTitle").innerText =
-  new Date(SELECTED_MONTH+"-01").toLocaleDateString("en-US",
-     {month:"long", year:"numeric"}
-  );
+    new Date(SELECTED_MONTH + "-01").toLocaleDateString("en-US",
+        {month:"long",year:"numeric"});
 
-const TARGET = 540; // 9h = 540 minutes
+/* CHANGE MONTH */
+document.getElementById("monthSwitch").addEventListener("change",(e)=>{
+    fetch("/change_month",{
+        method:"POST",
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({month:e.target.value})
+    }).then(()=>location.reload());
+});
 
-/* Format date */
+const TARGET=540; // 9 hours
+
+/* FORMAT DATE */
 function fmt(d){
-    return `${String(d.getDate()).padStart(2,'0')}-${d.toLocaleString("en",{month:"short"})}-${d.getFullYear()}`
+    return `${String(d.getDate()).padStart(2,'0')}-${d.toLocaleString("en",{month:"short"})}-${d.getFullYear()}`;
 }
 
-/* Build table rows */
+/* BUILD TABLE */
 function buildTable(){
+    const rows=document.getElementById("rows");
+
     let [y,m]=SELECTED_MONTH.split("-");
     m--;
+
     let d=new Date(y,m,1);
     let end=new Date(y,m+1,0);
-    let rows=document.getElementById("rows");
 
     while(d<=end){
         let key=d.toISOString().split("T")[0];
@@ -127,55 +195,52 @@ function buildTable(){
 
 rows.insertAdjacentHTML("beforeend",`
 <tr class="${off?'off':'work'}">
-<td data-key="${key}">${fmt(d)}</td>
-<td>${day}</td>
+    <td data-key="${key}">${fmt(d)}</td>
+    <td>${day}</td>
 
-<td>${off?'-':`
-  <input class="inH" value="10"> :
-  <input class="inM" value="30">
-  <select class="inAP">
-    <option selected>AM</option>
-    <option>PM</option>
-  </select>
-`}</td>
+    <td>${off?'-':`
+        <input class="inH" value="10"> :
+        <input class="inM" value="30">
+        <select class="inAP"><option selected>AM</option><option>PM</option></select>
+    `}</td>
 
-<td>${off?'-':`
-  <input class="outH" value="7"> :
-  <input class="outM" value="30">
-  <select class="outAP">
-    <option>AM</option>
-    <option selected>PM</option>
-  </select>
-`}</td>
+    <td>${off?'-':`
+        <input class="outH" value="7"> :
+        <input class="outM" value="30">
+        <select class="outAP"><option>AM</option><option selected>PM</option></select>
+    `}</td>
 
-<td id="w_${key}">-</td>
-<td id="t_${key}">-</td>
-<td id="b_${key}">-</td>
+    <td id="w_${key}">-</td>
+    <td id="t_${key}">-</td>
+    <td id="b_${key}">-</td>
 </tr>
 `);
 
-        d.setDate(d.getDate()+1);
+d.setDate(d.getDate()+1);
     }
 }
 
-/* Convert to minutes */
+/* TIME CONVERSION */
 function toMin(h,m,ap){
-    h=parseInt(h); m=parseInt(m);
+    h=parseInt(h);
+    m=parseInt(m);
+
     if(ap==="PM" && h!==12) h+=12;
     if(ap==="AM" && h===12) h=0;
+
     return h*60+m;
 }
 
-/* Save */
-function save(key, mins){
+/* SAVE */
+function saveRow(key,mins){
     fetch("/save",{
         method:"POST",
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({date:key, hours:mins/60})
+        body:JSON.stringify({date:key,hours:mins/60})
     });
 }
 
-/* FULL RECALC */
+/* RECALCULATE */
 function recalc(data){
     let week=0;
 
@@ -185,59 +250,61 @@ function recalc(data){
 
         let td=document.querySelector(`td[data-key='${key}']`);
         if(!td) return;
-        let row=td.parentElement;
 
+        let row=td.parentElement;
         let day=row.children[1].innerText;
+
         let w=document.getElementById("w_"+key);
         let t=document.getElementById("t_"+key);
         let b=document.getElementById("b_"+key);
 
-        /* Worked */
         w.innerText=`${Math.floor(mins/60)}h ${String(mins%60).padStart(2,'0')}m`;
 
         if(day==="Saturday"||day==="Sunday"){
-            t.innerText="-"; b.innerText="-"; return;
+            t.innerText="-";b.innerText="-";return;
         }
 
-        let diff=mins - TARGET;
+        let diff = mins - TARGET;
 
-        /* Today +/- */
         if(diff<0){ t.innerText=`-${(-diff/60|0)}h ${(-diff%60)}m`; t.className="red"; }
-        else if(diff>0){ t.innerText=`+${diff/60|0}h ${diff%60}m`; t.className="green"; }
-        else { t.innerText="0h 00m"; t.className="orange"; }
+        else if(diff>0){ t.innerText=`+${(diff/60|0)}h ${diff%60}m`; t.className="green"; }
+        else{ t.innerText="0h 00m"; t.className="orange"; }
 
-        /* WEEK START on Monday */
         if(day==="Monday") week=diff;
         else week+=diff;
 
-        /* Weekly Balance */
         let abs=Math.abs(week);
         b.innerText=`${week<0?'-':'+'}${abs/60|0}h ${abs%60}m`;
         b.className=week<0?"red":"green";
     });
 }
 
+/* LOAD SAVED DATA */
 function loadData(){
-    fetch("/load")
-        .then(r=>r.json())
-        .then(res=>recalc(res.data||{}));
+    fetch("/load").then(r=>r.json()).then(res=>{
+        recalc(res.data||{});
+    });
 }
 
-/* Update on edit */
-document.addEventListener("change",e=>{
-    if(!e.target.closest("tr")) return;
-    let tr=e.target.closest("tr");
-    let key=tr.children[0].dataset.key;
+/* CHANGE HANDLER */
+document.addEventListener("change",(e)=>{
+    const tr=e.target.closest("tr");
+    if(!tr) return;
 
-    let inH=tr.querySelector(".inH"); if(!inH) return;
-    let inM=tr.querySelector(".inM");
-    let inAP=tr.querySelector(".inAP");
-    let outH=tr.querySelector(".outH");
-    let outM=tr.querySelector(".outM");
-    let outAP=tr.querySelector(".outAP");
+    const key=tr.children[0].dataset.key;
+
+    const inH=tr.querySelector(".inH");
+    if(!inH) return;
+
+    const inM=tr.querySelector(".inM");
+    const inAP=tr.querySelector(".inAP");
+    const outH=tr.querySelector(".outH");
+    const outM=tr.querySelector(".outM");
+    const outAP=tr.querySelector(".outAP");
 
     let start=toMin(inH.value,inM.value,inAP.value);
     let end=toMin(outH.value,outM.value,outAP.value);
+
     if(end<start) end+=1440;
 
     let mins=end-start;
@@ -245,13 +312,14 @@ document.addEventListener("change",e=>{
     document.getElementById("w_"+key).innerText=
         `${Math.floor(mins/60)}h ${String(mins%60).padStart(2,'0')}m`;
 
-    save(key, mins);
+    saveRow(key,mins);
     loadData();
 });
 
-/* init */
+/* INIT */
 buildTable();
 setTimeout(loadData,300);
+
 </script>
 
 </body>

@@ -1,70 +1,134 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Login</title>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins;}
 body{
-    height:100vh;display:flex;justify-content:center;align-items:center;
-    background:linear-gradient(135deg,#6c63ff,#42a5f5);
+    font-family: Poppins, Arial;
+    background: linear-gradient(135deg,#6a9cfb,#7bb2ff,#a5c8ff);
+    height:100vh;
+    margin:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    animation: fadeIn 1s ease-in-out;
 }
-.box{
-    width:350px;padding:35px;border-radius:20px;
-    background:rgba(255,255,255,0.13);backdrop-filter:blur(18px);
-    color:white;box-shadow:0 8px 25px rgba(0,0,0,0.3);text-align:center;
+
+@keyframes fadeIn{
+    from{opacity:0;}
+    to{opacity:1;}
 }
-h2{margin-bottom:20px;font-size:28px;font-weight:600;}
+
+.card{
+    width:350px;
+    background:white;
+    padding:30px;
+    border-radius:18px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.15);
+    animation: slideUp 0.8s ease;
+}
+
+@keyframes slideUp{
+    from{transform:translateY(40px);opacity:0;}
+    to{transform:translateY(0);opacity:1;}
+}
+
+h2{
+    text-align:center;
+    margin-bottom:20px;
+    font-weight:600;
+    color:#4a78dd;
+}
+
 input,select{
-    width:100%;padding:12px;margin:10px 0;border:none;
-    border-radius:10px;font-size:15px;
+    width:94%;
+    padding:12px;
+    margin-top:12px;
+    border-radius:10px;
+    border:1px solid #bfbfbf;
+    font-size:15px;
+    transition:0.2s;
 }
+
+input:focus, select:focus{
+    border-color:#4a78dd;
+    box-shadow:0 0 5px rgba(74,120,221,0.5);
+}
+
 button{
-    width:100%;padding:12px;border:none;border-radius:10px;
-    background:white;color:#6c63ff;font-weight:600;font-size:17px;
+    width:100%;
+    padding:12px;
+    background:#4a78dd;
+    color:white;
+    border:none;
+    margin-top:18px;
+    border-radius:10px;
+    font-size:17px;
+    cursor:pointer;
+    transition:0.3s;
 }
-a{color:white;margin-top:10px;display:block;}
-.error{background:#ff4b4b;padding:8px;border-radius:10px;}
+
+button:hover{
+    background:#345fcc;
+}
+
+.links{
+    margin-top:15px;
+    text-align:center;
+}
+
+.links a{
+    text-decoration:none;
+    margin:0 8px;
+    color:#4a78dd;
+    font-size:14px;
+}
+
+.error{
+    color:red;
+    text-align:center;
+    margin-bottom:10px;
+}
 </style>
 </head>
 
 <body>
 
-<div class="box">
-    <h2>Login</h2>
+<div class="card">
 
-    <form method="POST">
-        <input type="email" name="email" placeholder="Email" required>
-        <input type="password" name="password" placeholder="Password" required>
+<h2>Welcome Back 💙</h2>
 
-        <select name="month" required>
-            <option value="">Select Month</option>
-            <option value="2025-12">December 2025</option>
-            <option value="2026-01">January 2026</option>
-            <option value="2026-02">February 2026</option>
-            <option value="2026-03">March 2026</option>
-            <option value="2026-04">April 2026</option>
-            <option value="2026-05">May 2026</option>
-            <option value="2026-06">June 2026</option>
-            <option value="2026-07">July 2026</option>
-            <option value="2026-08">August 2026</option>
-            <option value="2026-09">September 2026</option>
-            <option value="2026-10">October 2026</option>
-            <option value="2026-11">November 2026</option>
-            <option value="2026-12">December 2026</option>
-        </select>
+{% if error %}
+<div class="error">{{ error }}</div>
+{% endif %}
 
-        {% if error %}
-        <p class="error">{{ error }}</p>
-        {% endif %}
+<form method="POST">
 
-        <button type="submit">Login</button>
-    </form>
+    <input type="email" name="email" placeholder="Email" required>
 
+    <input type="password" name="password" placeholder="Password" required>
+
+    <input type="month" name="month" id="monthSelect" required>
+
+    <button type="submit">Login</button>
+</form>
+
+<div class="links">
     <a href="/signup">Create Account</a>
     <a href="/forgot">Forgot Password?</a>
 </div>
+
+</div>
+
+<script>
+// Auto-select current month
+let d=new Date();
+let y=d.getFullYear();
+let m=String(d.getMonth()+1).padStart(2,'0');
+document.getElementById("monthSelect").value=`${y}-${m}`;
+</script>
 
 </body>
 </html>
