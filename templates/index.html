@@ -163,13 +163,19 @@ document.getElementById("monthTitle").innerText =
         {month:"long",year:"numeric"});
 
 /* CHANGE MONTH */
-document.getElementById("monthSwitch").addEventListener("change",(e)=>{
-    fetch("/change_month",{
-        method:"POST",
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({month:e.target.value})
-    }).then(()=>location.reload());
+document.getElementById("monthSwitch").addEventListener("change", function () {
+
+    let formData = new FormData();
+    formData.append("month", this.value);
+
+    fetch("/change_month", {
+        method: "POST",
+        body: formData
+    }).then(() => {
+        window.location.reload();
+    });
 });
+
 
 const TARGET=540; // 9 hours
 
