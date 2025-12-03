@@ -37,7 +37,18 @@
         },
         "s@gmail.com": {
             "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
-            "data": {}
+            "data": {
+                "2026-08-02": {
+                    "date": "2026-08-02",
+                    "hours": 20.516666666666666,
+                    "inH": "10",
+                    "inM": "59",
+                    "inAP": "PM",
+                    "outH": "7",
+                    "outM": "30",
+                    "outAP": "PM"
+                }
+            }
         }
     }
 }
